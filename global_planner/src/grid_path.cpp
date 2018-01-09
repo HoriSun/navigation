@@ -40,7 +40,12 @@
 #include <stdio.h>
 namespace global_planner {
 
-bool GridPath::getPath(float* potential, double start_x, double start_y, double end_x, double end_y, std::vector<std::pair<float, float> >& path) {
+// [ TODO ] NOT considering about lethal_cost. Is it required here ?
+
+bool GridPath::getPath(float* potential, 
+                       double start_x, double start_y, 
+                       double end_x,   double end_y, 
+                       std::vector<std::pair<float, float> >& path) {
     std::pair<float, float> current;
     current.first = end_x;
     current.second = end_y;
@@ -51,25 +56,53 @@ bool GridPath::getPath(float* potential, double start_x, double start_y, double 
     int c = 0;
     int ns = xs_ * ys_;
     
+    float min_val = 1e10;
+    int min_x = 0, min_y = 0;
+    int x = 0, y = 0;
+    int index = 0;
+    //int xd, yd;
+    int idir = 0;
+
+    // 8 directions
+    static const int NUM_DIR = 8;
+    static const int dir_table[NUM_DIR][2] = {{ 1, 1},
+                                              { 1, 0},
+                                              { 1,-1},
+                                              { 0,-1},
+                                              {-1,-1},
+                                              {-1, 0},
+                                              {-1, 1},
+                                              { 0, 1}};
+    
     while (getIndex(current.first, current.second) != start_index) {
-        float min_val = 1e10;
-        int min_x = 0, min_y = 0;
-        for (int xd = -1; xd <= 1; xd++) {
-            for (int yd = -1; yd <= 1; yd++) {
-                if (xd == 0 && yd == 0)
-                    continue;
-                int x = current.first + xd, y = current.second + yd;
-                int index = getIndex(x, y);
-                if (potential[index] < min_val) {
-                    min_val = potential[index];
-                    min_x = x;
-                    min_y = y;
-                }
+        min_val = 1e10;
+        min_x = -1;
+        min_y = -1;
+        //for (xd = -1; xd <= 1; xd++) {
+        //    for (yd = -1; yd <= 1; yd++) {
+        for(idir = 0; idir < NUM_DIR ; idir++) {
+            //if (xd == 0 && yd == 0)
+            //        continue;
+            x = current.first  + dir_table[idir][0];//xd;
+            y = current.second + dir_table[idir][1];//yd;
+            index = getIndex(x, y);
+            if( x < 0 || x >= xs_ ||
+                y < 0 || y >= ys_ ) {
+              continue;
             }
+            if (potential[index] < min_val) {
+              min_val = potential[index];
+              min_x = x;
+              min_y = y;
+            }
+            //}
         }
-        if (min_x == 0 && min_y == 0)
+
+        if (min_x == -1 && min_y == -1) {
             return false;
-        current.first = min_x;
+        }
+
+        current.first  = min_x;
         current.second = min_y;
         path.push_back(current);
         

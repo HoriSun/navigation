@@ -44,8 +44,11 @@ AStarExpansion::AStarExpansion(PotentialCalculator* p_calc, int xs, int ys) :
         Expander(p_calc, xs, ys) {
 }
 
-bool AStarExpansion::calculatePotentials(unsigned char* costs, double start_x, double start_y, double end_x, double end_y,
-                                        int cycles, float* potential) {
+bool AStarExpansion::calculatePotentials(unsigned char* costs, 
+                                         double start_x, double start_y, 
+                                         double end_x  , double end_y  ,
+                                         int cycles, 
+                                         float* potential) {
     queue_.clear();
     int start_i = toIndex(start_x, start_y);
     queue_.push_back(Index(start_i, 0));

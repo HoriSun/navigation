@@ -190,12 +190,16 @@ namespace navfn {
   }
 
   bool NavfnROS::makePlan(const geometry_msgs::PoseStamped& start, 
-      const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan){
+                          const geometry_msgs::PoseStamped& goal, 
+                          std::vector<geometry_msgs::PoseStamped>& plan){
     return makePlan(start, goal, default_tolerance_, plan);
   }
 
   bool NavfnROS::makePlan(const geometry_msgs::PoseStamped& start, 
-      const geometry_msgs::PoseStamped& goal, double tolerance, std::vector<geometry_msgs::PoseStamped>& plan){
+                          const geometry_msgs::PoseStamped& goal, 
+                          double tolerance, 
+                          std::vector<geometry_msgs::PoseStamped>& plan) {
+
     boost::mutex::scoped_lock lock(mutex_);
     if(!initialized_){
       ROS_ERROR("This planner has not been initialized yet, but it is being used, please call initialize() before use");
@@ -236,12 +240,13 @@ namespace navfn {
     tf::poseStampedMsgToTF(start, start_pose);
     clearRobotCell(start_pose, mx, my);
 
-#if 0
+#if 1
     {
       static int n = 0;
       static char filename[1000];
       snprintf( filename, 1000, "navfnros-makeplan-costmapB-%04d.pgm", n++ );
-      costmap->saveRawMap( std::string( filename ));
+      //costmap->saveRawMap( std::string( filename ));
+      costmap->saveMap( std::string( filename ));
     }
 #endif
 
@@ -249,7 +254,7 @@ namespace navfn {
     planner_->setNavArr(costmap->getSizeInCellsX(), costmap->getSizeInCellsY());
     planner_->setCostmap(costmap->getCharMap(), true, allow_unknown_);
 
-#if 0
+#if 1
     {
       static int n = 0;
       static char filename[1000];
@@ -341,7 +346,8 @@ namespace navfn {
           mapToWorld(i%planner_->nx, i/planner_->nx, pot_x, pot_y);
           pt.x = pot_x;
           pt.y = pot_y;
-          pt.z = pp[i]/pp[planner_->start[1]*planner_->nx + planner_->start[0]]*20;
+          //pt.z = pp[i]/pp[planner_->start[1]*planner_->nx + planner_->start[0]]*20;
+          pt.z = pp[i]/pp[planner_->start[1]*planner_->nx + planner_->start[0]];
           pt.pot_value = pp[i];
           pot_area.push_back(pt);
         }

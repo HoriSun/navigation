@@ -1,0 +1,1 @@
+`global_planner` seems to be modified from `navfn`. It is written in a more clear, object-oriented form.

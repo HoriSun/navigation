@@ -289,7 +289,7 @@ namespace navfn {
   bool
     NavFn::calcNavFnDijkstra(bool atStart)
     {
-#if 0
+#if 1
       static char costmap_filename[1000];
       static int file_number = 0;
       snprintf( costmap_filename, 1000, "navfn-dijkstra-costmap-%04d", file_number++ );
@@ -322,27 +322,27 @@ namespace navfn {
   //
 
   bool
-    NavFn::calcNavFnAstar()
-    {
-      setupNavFn(true);
+  NavFn::calcNavFnAstar()
+  {
+    setupNavFn(true);
 
-      // calculate the nav fn and path
-      propNavFnAstar(std::max(nx*ny/20,nx+ny));
+    // calculate the nav fn and path
+    propNavFnAstar(std::max(nx*ny/20,nx+ny));
 
-      // path
-      int len = calcPath(nx*4);
+    // path
+    int len = calcPath(nx*4);
 
-      if (len > 0)			// found plan
+    if (len > 0)			// found plan
       {
         ROS_DEBUG("[NavFn] Path found, %d steps\n", len);
         return true;
       }
-      else
+    else
       {
         ROS_DEBUG("[NavFn] No path found\n");
         return false;
       }
-    }
+  }
 
 
   //
@@ -397,57 +397,56 @@ namespace navfn {
 
 
   // Set up navigation potential arrays for new propagation
-
   void
-    NavFn::setupNavFn(bool keepit)
-    {
-      // reset values in propagation arrays
-      for (int i=0; i<ns; i++)
+  NavFn::setupNavFn(bool keepit)
+  {
+    // reset values in propagation arrays
+    for (int i=0; i<ns; i++)
       {
         potarr[i] = POT_HIGH;
         if (!keepit) costarr[i] = COST_NEUTRAL;
         gradx[i] = grady[i] = 0.0;
       }
 
-      // outer bounds of cost array
-      COSTTYPE *pc;
-      pc = costarr;
-      for (int i=0; i<nx; i++)
-        *pc++ = COST_OBS;
-      pc = costarr + (ny-1)*nx;
-      for (int i=0; i<nx; i++)
-        *pc++ = COST_OBS;
-      pc = costarr;
-      for (int i=0; i<ny; i++, pc+=nx)
-        *pc = COST_OBS;
-      pc = costarr + nx - 1;
-      for (int i=0; i<ny; i++, pc+=nx)
-        *pc = COST_OBS;
+    // outer bounds of cost array
+    COSTTYPE *pc;
+    pc = costarr;
+    for (int i=0; i<nx; i++)
+      *pc++ = COST_OBS;
+    pc = costarr + (ny-1)*nx;
+    for (int i=0; i<nx; i++)
+      *pc++ = COST_OBS;
+    pc = costarr;
+    for (int i=0; i<ny; i++, pc+=nx)
+      *pc = COST_OBS;
+    pc = costarr + nx - 1;
+    for (int i=0; i<ny; i++, pc+=nx)
+      *pc = COST_OBS;
 
-      // priority buffers
-      curT = COST_OBS;
-      curP = pb1; 
-      curPe = 0;
-      nextP = pb2;
-      nextPe = 0;
-      overP = pb3;
-      overPe = 0;
-      memset(pending, 0, ns*sizeof(bool));
+    // priority buffers
+    curT = COST_OBS;
+    curP = pb1; 
+    curPe = 0;
+    nextP = pb2;
+    nextPe = 0;
+    overP = pb3;
+    overPe = 0;
+    memset(pending, 0, ns*sizeof(bool));
 
-      // set goal
-      int k = goal[0] + goal[1]*nx;
-      initCost(k,0);
+    // set goal
+    int k = goal[0] + goal[1]*nx;
+    initCost(k,0);
 
-      // find # of obstacle cells
-      pc = costarr;
-      int ntot = 0;
-      for (int i=0; i<ns; i++, pc++)
+    // find # of obstacle cells
+    pc = costarr;
+    int ntot = 0;
+    for (int i=0; i<ns; i++, pc++)
       {
         if (*pc >= COST_OBS)
           ntot++;			// number of cells that are obstacles
       }
-      nobs = ntot;
-    }
+    nobs = ntot;
+  }
 
 
   // initialize a goal-type cost for starting propagation

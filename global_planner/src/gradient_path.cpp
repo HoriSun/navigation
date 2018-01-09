@@ -65,63 +65,114 @@ void GradientPath::setSize(int xs, int ys) {
     grady_ = new float[xs * ys];
 }
 
-bool GradientPath::getPath(float* potential, double start_x, double start_y, double goal_x, double goal_y, std::vector<std::pair<float, float> >& path) {
+  /**
+   * [ TODO ] Check whether params (`start_x`, `start_y`, `goal_x`, `goal_y`)
+   *          passed to this function are all in the map, and think about if
+   *          we should check them here, and return `false` when the points
+   *          are out of map (which are considered unknown)
+   */
+bool GradientPath::getPath(float* potential, 
+                           double start_x, double start_y, 
+                           double goal_x, double goal_y, 
+                           std::vector<std::pair<float, float> >& path) {
     std::pair<float, float> current;
+
+    // make sure `( goal_x, goal_y )` is really in the map
     int stc = getIndex(goal_x, goal_y);
 
     // set up offset
-    float dx = goal_x - (int)goal_x;
-    float dy = goal_y - (int)goal_y;
+    float dx = goal_x - (int)goal_x; // Truncated when force conversed
+    float dy = goal_y - (int)goal_y; // taking the fractional part
     int ns = xs_ * ys_;
     memset(gradx_, 0, ns * sizeof(float));
     memset(grady_, 0, ns * sizeof(float));
 
     int c = 0;
+    double nx, ny;
+    bool oscillation_detected;
+    int npath;
+
+    int stcnx;
+    int stcpx;
+
+    int minc;
+    int minp;
+    int st;
+
+    float x1, x2;
+    float y1, y2;
+    float x; // interpolated x
+    float y; // interpolated y
+    float ss;
+ 
     while (c++<ns*4) {
         // check if near goal
-        double nx = stc % xs_ + dx, ny = stc / xs_ + dy;
+        nx = stc % xs_ + dx;
+        ny = stc / xs_ + dy;
 
+        // [ TODO ] This will cause a problem that the path
+        //          has an abrupt turn inside the goal pixel.
+        //          When the pixel is a 0.2x0.2 square, this
+        //          abrupt turn will make the path ugly.
+        //          
+        //          There are 3 ways to solve this:
+        //            1. Try to compute an analytic path to the 
+        //               start point in advance, when the current 
+        //               point is near the start point (fail when
+        //               obstacle occurs)
+        //            2. Online local path smoothing (obstacle 
+        //               considered)
+        //            3. Post processing after path generation to 
+        //               make it smooth (obstacle considered)        
         if (fabs(nx - start_x) < .5 && fabs(ny - start_y) < .5) {
-            current.first = start_x;
+            current.first  = start_x;
             current.second = start_y;
             path.push_back(current);
             return true;
         }
 
+        // [ TODO ] Why not checking ys_ ?
         if (stc < xs_ || stc > xs_ * ys_ - xs_) // would be out of bounds
         {
             printf("[PathCalc] Out of bounds\n");
             return false;
         }
 
-        current.first = nx;
+        current.first  = nx;
         current.second = ny;
 
         //ROS_INFO("%d %d | %f %f ", stc%xs_, stc/xs_, dx, dy);
 
         path.push_back(current);
 
-        bool oscillation_detected = false;
-        int npath = path.size();
+        // [ TODO ] ??? Why oscillation happens ???
+        oscillation_detected = false;
+        npath = path.size();
         if (npath > 2 && path[npath - 1].first == path[npath - 3].first
                 && path[npath - 1].second == path[npath - 3].second) {
             ROS_DEBUG("[PathCalc] oscillation detected, attempting fix.");
             oscillation_detected = true;
         }
 
-        int stcnx = stc + xs_;
-        int stcpx = stc - xs_;
+        stcnx = stc + xs_;
+        stcpx = stc - xs_;
 
         // check for potentials at eight positions near cell
-        if (potential[stc] >= POT_HIGH || potential[stc + 1] >= POT_HIGH || potential[stc - 1] >= POT_HIGH
-                || potential[stcnx] >= POT_HIGH || potential[stcnx + 1] >= POT_HIGH || potential[stcnx - 1] >= POT_HIGH
-                || potential[stcpx] >= POT_HIGH || potential[stcpx + 1] >= POT_HIGH || potential[stcpx - 1] >= POT_HIGH
-                || oscillation_detected) {
+        if ( potential[stc      ] >= POT_HIGH || 
+             potential[stc   + 1] >= POT_HIGH || 
+             potential[stc   - 1] >= POT_HIGH || 
+             potential[stcnx    ] >= POT_HIGH || 
+             potential[stcnx + 1] >= POT_HIGH || 
+             potential[stcnx - 1] >= POT_HIGH || 
+             potential[stcpx    ] >= POT_HIGH || 
+             potential[stcpx + 1] >= POT_HIGH || 
+             potential[stcpx - 1] >= POT_HIGH || 
+             oscillation_detected ) {
             ROS_DEBUG("[Path] Pot fn boundary, following grid (%0.1f/%d)", potential[stc], (int) path.size());
             // check eight neighbors to find the lowest
-            int minc = stc;
-            int minp = potential[stc];
-            int st = stcpx - 1;
+            minc = stc;
+            minp = potential[stc];
+            st = stcpx - 1;
             if (potential[st] < minp) {
                 minp = potential[st];
                 minc = st;
@@ -185,16 +236,20 @@ bool GradientPath::getPath(float* potential, double start_x, double start_y, dou
             gradCell(potential, stcnx + 1);
 
             // get interpolated gradient
-            float x1 = (1.0 - dx) * gradx_[stc] + dx * gradx_[stc + 1];
-            float x2 = (1.0 - dx) * gradx_[stcnx] + dx * gradx_[stcnx + 1];
-            float x = (1.0 - dy) * x1 + dy * x2; // interpolated x
-            float y1 = (1.0 - dx) * grady_[stc] + dx * grady_[stc + 1];
-            float y2 = (1.0 - dx) * grady_[stcnx] + dx * grady_[stcnx + 1];
-            float y = (1.0 - dy) * y1 + dy * y2; // interpolated y
+            x1 = (1.0 - dx) * gradx_[stc]   + dx * gradx_[stc + 1];
+            x2 = (1.0 - dx) * gradx_[stcnx] + dx * gradx_[stcnx + 1];
+            x  = (1.0 - dy) * x1 + dy * x2; // interpolated x
+            y1 = (1.0 - dx) * grady_[stc]   + dx * grady_[stc + 1];
+            y2 = (1.0 - dx) * grady_[stcnx] + dx * grady_[stcnx + 1];
+            y  = (1.0 - dy) * y1 + dy * y2; // interpolated y
 
             // show gradients
-            ROS_DEBUG(
-                    "[Path] %0.2f,%0.2f  %0.2f,%0.2f  %0.2f,%0.2f  %0.2f,%0.2f; final x=%.3f, y=%.3f\n", gradx_[stc], grady_[stc], gradx_[stc+1], grady_[stc+1], gradx_[stcnx], grady_[stcnx], gradx_[stcnx+1], grady_[stcnx+1], x, y);
+            ROS_DEBUG("[Path] "
+                      "%0.2f,%0.2f  %0.2f,%0.2f  %0.2f,%0.2f  %0.2f,%0.2f; "
+                      "final x=%.3f, y=%.3f\n", 
+                      gradx_[stc], grady_[stc], gradx_[stc+1], grady_[stc+1], 
+                      gradx_[stcnx], grady_[stcnx], gradx_[stcnx+1], grady_[stcnx+1], 
+                      x, y);
 
             // check for zero gradient, failed
             if (x == 0.0 && y == 0.0) {
@@ -203,7 +258,7 @@ bool GradientPath::getPath(float* potential, double start_x, double start_y, dou
             }
 
             // move in the right direction
-            float ss = pathStep_ / hypot(x, y);
+            ss = pathStep_ / hypot(x, y);
             dx += x * ss;
             dy += y * ss;
 
@@ -234,29 +289,6 @@ bool GradientPath::getPath(float* potential, double start_x, double start_y, dou
     return false;
 }
 
-/*
- int
- NavFn::calcPath(int n, int *st)
- {
- // set up start position at cell
- // st is always upper left corner for 4-point bilinear interpolation
- if (st == NULL) st = start;
- int stc = st[1]*nx + st[0];
-
- // go for <n> cycles at most
- for (int i=0; i<n; i++)
- {
-
-
-
- }
-
- //  return npath;            // out of cycles, return failure
- ROS_DEBUG("[PathCalc] No path found, path too long");
- //savemap("navfn_pathlong");
- return 0;            // out of cycles, return failure
- }
- */
 
 //
 // gradient calculations

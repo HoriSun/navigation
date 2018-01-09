@@ -108,10 +108,12 @@ void GlobalPlanner::initialize(std::string name, costmap_2d::Costmap2D* costmap,
 
         bool use_quadratic;
         private_nh.param("use_quadratic", use_quadratic, true);
-        if (use_quadratic)
-            p_calc_ = new QuadraticCalculator(cx, cy);
-        else
-            p_calc_ = new PotentialCalculator(cx, cy);
+        if (use_quadratic) {
+          p_calc_ = new QuadraticCalculator(cx, cy);
+        }
+        else {
+          p_calc_ = new PotentialCalculator(cx, cy);
+        }
 
         bool use_dijkstra;
         private_nh.param("use_dijkstra", use_dijkstra, true);
