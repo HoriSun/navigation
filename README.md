@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ROS Navigation Stack
 ====================
 
@@ -16,3 +17,7 @@ For discussion of ROS "hydro" release development, please check out the
 https://groups.google.com/group/ros-sig-navigation mailing list and see
 the SIG pages at http://www.ros.org/wiki/sig/Navigation and
 http://www.ros.org/wiki/hydro/Planning/Navigation. 
+=======
+# navigation
+ROS open-source navigation stack commented and modified. For study purpose.
+>>>>>>> master
